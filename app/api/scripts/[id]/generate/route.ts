@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { getUserFromSession } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { getTuerAiModel, extractLuaFromResponse } from "@/lib/gemini";
+
+const CREDITS_PER_GENERATION = 1;
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getUserFromSession();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.credits < CREDITS_PER_GENERATION) {
+    return NextResponse.json(
+      { error: "Insufficient credits", credits: user.credits },
+      { status: 402 }
+    );
+  }
+  const { id } = await params;
+  const script = await prisma.script.findFirst({
+    where: { id, userId: user.id },
+  });
+  if (!script) return NextResponse.json({ error: "Script not found" }, { status: 404 });
+
+  const body = await req.json().catch(() => ({}));
+  const { message, history } = body as { message?: string; history?: Array<{ role: string; content: string }> };
+  if (!message || typeof message !== "string") {
+    return NextResponse.json({ error: "message required" }, { status: 400 });
+  }
+
+  try {
+    const model = getTuerAiModel();
+    const historyList = Array.isArray(history) ? history : [];
+    const parts = [
+      `Current script content:\n\`\`\`lua\n${script.content || "-- empty"}\n\`\`\``,
+      ...historyList.map((h) => `${h.role === "user" ? "User" : "TuerAi"}: ${h.content}`),
+      `User: ${message}`,
+    ];
+    const prompt = parts.join("\n\n");
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text() || "";
+    const code = extractLuaFromResponse(text) ?? text;
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { credits: { decrement: CREDITS_PER_GENERATION } },
+    });
+
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { credits: true },
+    });
+
+    return NextResponse.json({
+      reply: text,
+      code,
+      credits: updatedUser?.credits ?? user.credits - CREDITS_PER_GENERATION,
+    });
+  } catch (err) {
+    console.error("TuerAi generate error:", err);
+    return NextResponse.json(
+      { error: "Generation failed. Please try again." },
+      { status: 500 }
+    );
+  }
+}
