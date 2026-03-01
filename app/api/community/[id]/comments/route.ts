@@ -11,7 +11,7 @@ export async function GET(
     where: { communityScriptId: id },
     orderBy: { createdAt: "asc" },
   });
-  const userIds = [...new Set(comments.map((c) => c.userId))];
+  const userIds = Array.from(new Set(comments.map((c) => c.userId)));
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
     select: { id: true, username: true, profileImageUrl: true },

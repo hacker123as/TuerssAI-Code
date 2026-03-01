@@ -15,7 +15,7 @@ export async function GET(
     where: { id: script.userId },
     select: { id: true, username: true, profileImageUrl: true },
   });
-  const commentUserIds = [...new Set(script.comments.map((c) => c.userId))];
+  const commentUserIds = Array.from(new Set(script.comments.map((c) => c.userId)));
   const commentUsers = await prisma.user.findMany({
     where: { id: { in: commentUserIds } },
     select: { id: true, username: true, profileImageUrl: true },

@@ -8,7 +8,7 @@ export async function GET() {
     take: 50,
     include: { comments: true },
   });
-  const userIds = [...new Set(scripts.map((s) => s.userId))];
+  const userIds = Array.from(new Set(scripts.map((s) => s.userId)));
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
     select: { id: true, username: true, profileImageUrl: true },
