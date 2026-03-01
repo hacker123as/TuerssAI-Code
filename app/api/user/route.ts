@@ -6,7 +6,7 @@ export async function PATCH(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const updates: { theme?: string; aiLanguage?: string; profileImageUrl?: string } = {};
+  const updates: { theme?: string; aiLanguage?: string; profileImageUrl?: string | null } = {};
   if (typeof body.theme === "string" && ["dark", "light", "system"].includes(body.theme)) {
     updates.theme = body.theme;
   }
