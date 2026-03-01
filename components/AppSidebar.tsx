@@ -8,7 +8,7 @@ type User = {
   id: string;
   email?: string;
   username: string;
-  credits: number;
+  credits?: number;
   profileImageUrl?: string | null;
   theme?: string | null;
   aiLanguage?: string | null;
@@ -56,7 +56,7 @@ export function AppSidebar({ user }: { user: User }) {
               <p className="truncate text-sm font-medium text-white">{user.username}</p>
               <p className="flex items-center gap-1 text-xs text-sand-500">
                 <Zap className="h-3 w-3 text-amber-400" />
-                {user.credits} generations
+                {user.credits ?? 0} generations
               </p>
               {user.plan && user.plan !== "free" && (
                 <p className="text-[10px] uppercase tracking-wider text-sand-500">{user.plan}</p>
