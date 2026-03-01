@@ -11,25 +11,25 @@ export async function GET(
     include: { comments: true },
   });
   if (!script) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  await prisma.communityScript.update({
+  const updated = await prisma.communityScript.update({
     where: { id },
     data: { views: { increment: 1 } },
+    include: { comments: true },
   });
   const author = await prisma.user.findUnique({
-    where: { id: script.userId },
+    where: { id: updated.userId },
     select: { id: true, username: true, profileImageUrl: true },
   });
-  const commentUserIds = Array.from(new Set(script.comments.map((c) => c.userId)));
+  const commentUserIds = Array.from(new Set(updated.comments.map((c) => c.userId)));
   const commentUsers = await prisma.user.findMany({
     where: { id: { in: commentUserIds } },
     select: { id: true, username: true, profileImageUrl: true },
   });
   const userMap = Object.fromEntries(commentUsers.map((u) => [u.id, u]));
   return NextResponse.json({
-    ...script,
-    views: script.views + 1,
+    ...updated,
     author: author ? { username: author.username, profileImageUrl: author.profileImageUrl } : { username: "unknown", profileImageUrl: null },
-    comments: script.comments.map((c) => ({
+    comments: updated.comments.map((c) => ({
       id: c.id,
       content: c.content,
       createdAt: c.createdAt,

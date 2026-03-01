@@ -15,7 +15,7 @@ When the user asks for code or changes, return ONLY the code that changed—neve
 end
 \`\`\`"
 - To ADD new code at a position, use RANGE with the line number where to insert (startLine and endLine both equal to that line, or the line after which to insert—we will replace that single line with that line plus your new code if needed).
-- To REPLACE existing lines, set RANGE to the first and last line (1-based) of the section you are replacing. Your code block is the replacement for exactly those lines.
+- To REPLACE existing lines, set RANGE to the first and last line (1-based) of the section you are replacing. Your code block must contain ONLY the replacement lines—do not include any unchanged lines from above or below the range, or the editor will duplicate code.
 
 3) If the script is empty and the user wants a new script: return the full script in one \`\`\`lua block (no RANGE line).
 
