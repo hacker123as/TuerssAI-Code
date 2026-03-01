@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Zap, LogOut, Settings, Users, LayoutDashboard } from "lucide-react";
+import { Zap, LogOut, Settings, Users, LayoutDashboard, Shield } from "lucide-react";
 
 type User = {
   id: string;
@@ -13,6 +13,7 @@ type User = {
   theme?: string | null;
   aiLanguage?: string | null;
   plan?: string | null;
+  role?: string;
 } | null;
 
 export function AppSidebar({ user }: { user: User }) {
@@ -29,6 +30,7 @@ export function AppSidebar({ user }: { user: User }) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/community", label: "Community", icon: Users },
     { href: "/settings", label: "Settings", icon: Settings },
+    ...(user?.role === "admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
 
   return (

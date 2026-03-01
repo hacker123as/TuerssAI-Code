@@ -13,6 +13,7 @@ model User {
   username        String   @unique
   passwordHash    String
   emailVerified   Boolean  @default(false)
+  role            String   @default("user")  // "user" | "admin"
   credits         Int      @default(20)
   lastDailyGrant  String?  // ISO date of last daily credit grant
   profileImageUrl String?  // data URL or stored URL for avatar
@@ -47,17 +48,20 @@ model Script {
 }
 
 model CommunityScript {
-  id          String   @id @default(cuid()) @map("_id")
-  userId      String   // author
-  title       String
-  description String?  @default("")
-  content     String   @default("") // script code at time of share
-  imageUrl    String?  // optional preview image (data URL or stored)
-  madeByAI    Boolean  @default(false)
-  views       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  comments    Comment[]
+  id           String    @id @default(cuid()) @map("_id")
+  userId       String    // author
+  title        String
+  description  String?   @default("")
+  content      String    @default("") // script code at time of share
+  imageUrl     String?   // optional preview image (data URL or stored)
+  madeByAI     Boolean   @default(false)
+  views        Int       @default(0)
+  verified     Boolean   @default(false)  // admin verified as safe
+  verifiedAt   DateTime?
+  verifiedById String?   // admin userId who verified
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  comments     Comment[]
 }
 
 model Comment {

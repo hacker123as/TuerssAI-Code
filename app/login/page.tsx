@@ -10,7 +10,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [bypassLoading, setBypassLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,26 +32,6 @@ export default function LoginPage() {
       setError("Something went wrong");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleBypass() {
-    setError("");
-    setBypassLoading(true);
-    try {
-      const res = await fetch("/api/auth/bypass", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        const msg = data.detail ? `${data.error}: ${data.detail}` : (data.error || "Bypass failed");
-        setError(msg);
-        return;
-      }
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setError("Bypass failed. Check console or try again.");
-    } finally {
-      setBypassLoading(false);
     }
   }
 
@@ -106,20 +85,6 @@ export default function LoginPage() {
             {loading ? "Logging in…" : "Log in"}
           </button>
         </form>
-
-        <div className="mt-5 border-t border-white/10 pt-5">
-          <button
-            type="button"
-            onClick={handleBypass}
-            disabled={bypassLoading}
-            className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-sm font-medium text-amber-300 transition-all duration-200 hover:bg-amber-500/20 disabled:opacity-50"
-          >
-            {bypassLoading ? "…" : "Bypass (test account)"}
-          </button>
-          <p className="mt-1.5 text-center text-xs text-sand-500">
-            Use test account for quick testing
-          </p>
-        </div>
 
         <p className="mt-6 text-center text-sm text-sand-500">
           Don&apos;t have an account?{" "}

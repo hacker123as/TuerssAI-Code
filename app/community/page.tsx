@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { FileCode, MessageCircle, Bot, User, Search, Eye, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 
-type Author = { username: string; profileImageUrl?: string | null };
+type Author = { username: string; profileImageUrl?: string | null; role?: string };
 type CommunityScript = {
   id: string;
   title: string;
@@ -15,6 +15,7 @@ type CommunityScript = {
   imageUrl: string | null;
   madeByAI: boolean;
   views: number;
+  verified?: boolean;
   createdAt: string;
   commentCount: number;
   author: Author;
@@ -39,7 +40,17 @@ function ScriptCard({ s }: { s: CommunityScript }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-white">{s.author.username}</span>
+            {(s.author.role === "admin") && (
+              <span className="inline-flex items-center rounded-full bg-amber-500/25 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                Admin
+              </span>
+            )}
             <span className="text-xs text-sand-500">{new Date(s.createdAt).toLocaleDateString()}</span>
+            {s.verified && (
+              <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                Verified
+              </span>
+            )}
             {s.madeByAI ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
                 <Bot className="h-3 w-3" /> AI
@@ -75,7 +86,7 @@ function ScriptCard({ s }: { s: CommunityScript }) {
 
 export default function CommunityPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ id: string; username: string; credits?: number; profileImageUrl?: string | null } | null>(null);
+  const [user, setUser] = useState<{ id: string; username: string; credits?: number; profileImageUrl?: string | null; role?: string } | null>(null);
   const [scripts, setScripts] = useState<CommunityScript[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

@@ -7,7 +7,7 @@ import { ArrowLeft, MessageCircle, Bot, User, Flag, Send, Copy, Eye, Check } fro
 import { AppSidebar } from "@/components/AppSidebar";
 import { ChatCodeBlock } from "@/components/ChatCodeBlock";
 
-type Author = { username: string; profileImageUrl?: string | null };
+type Author = { username: string; profileImageUrl?: string | null; role?: string };
 type Comment = { id: string; content: string; createdAt: string; author: Author };
 type ScriptDetail = {
   id: string;
@@ -17,6 +17,7 @@ type ScriptDetail = {
   imageUrl: string | null;
   madeByAI: boolean;
   views?: number;
+  verified?: boolean;
   createdAt: string;
   author: Author;
   comments: Comment[];
@@ -33,7 +34,7 @@ export default function CommunityScriptPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const [user, setUser] = useState<{ id: string; username: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; username: string; role?: string } | null>(null);
   const [script, setScript] = useState<ScriptDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState("");
@@ -43,6 +44,7 @@ export default function CommunityScriptPage() {
   const [reportDetails, setReportDetails] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const load = useCallback(async () => {
     const [meRes, scriptRes] = await Promise.all([
@@ -112,6 +114,21 @@ export default function CommunityScriptPage() {
     }
   }
 
+  async function toggleVerify() {
+    if (!script || verifying) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`/api/community/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verified: !script.verified }),
+      });
+      if (res.ok) await load();
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   if (loading || !script) {
     return (
       <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d]">
@@ -148,9 +165,21 @@ export default function CommunityScriptPage() {
                   )}
                 </Link>
                 <div>
-                  <Link href={`/profile/${script.author.username}`} className="font-semibold text-white hover:underline">
-                    {script.author.username}
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={`/profile/${script.author.username}`} className="font-semibold text-white hover:underline">
+                      {script.author.username}
+                    </Link>
+                    {script.author.role === "admin" && (
+                      <span className="inline-flex items-center rounded-full bg-amber-500/25 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                        Admin
+                      </span>
+                    )}
+                    {script.verified && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                        Verified
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-sand-500">{new Date(script.createdAt).toLocaleString()}</p>
                   {script.madeByAI ? (
                     <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
@@ -163,7 +192,18 @@ export default function CommunityScriptPage() {
                   )}
                 </div>
               </div>
-              <div className="relative">
+              <div className="flex items-center gap-2">
+                {user?.role === "admin" && (
+                  <button
+                    type="button"
+                    onClick={toggleVerify}
+                    disabled={verifying}
+                    className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-50"
+                  >
+                    {verifying ? "…" : script.verified ? "Unverify" : "Verify safe"}
+                  </button>
+                )}
+                <div className="relative">
                 <button
                   type="button"
                   onClick={() => setReportOpen(!reportOpen)}
@@ -173,7 +213,7 @@ export default function CommunityScriptPage() {
                 </button>
                 {reportOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setReportOpen(false)} />
+                    <div className="fixed inset-0 z-40" aria-hidden onClick={() => setReportOpen(false)} />
                     <form
                       onSubmit={submitReport}
                       className="absolute right-0 top-full z-50 mt-1 w-64 rounded-xl border border-white/10 bg-[#1a1a1a] p-3 shadow-xl"

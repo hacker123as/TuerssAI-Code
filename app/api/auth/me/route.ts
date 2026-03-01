@@ -9,7 +9,7 @@ export async function GET() {
   const u = updated || user;
   return NextResponse.json({
     user: u
-      ? { id: u.id, email: u.email, username: u.username, credits: u.credits, profileImageUrl: u.profileImageUrl ?? null, theme: u.theme ?? null, aiLanguage: u.aiLanguage ?? null, plan: u.plan ?? null }
+      ? { id: u.id, email: u.email, username: u.username, credits: u.credits, profileImageUrl: u.profileImageUrl ?? null, theme: u.theme ?? null, aiLanguage: u.aiLanguage ?? null, plan: u.plan ?? null, role: u.role ?? "user" }
       : null,
   });
 }

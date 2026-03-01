@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const userIds = Array.from(new Set(scripts.map((s) => s.userId)));
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, username: true, profileImageUrl: true },
+    select: { id: true, username: true, profileImageUrl: true, role: true },
   });
   const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
   let filtered = scripts;
@@ -27,18 +27,24 @@ export async function GET(req: Request) {
       );
     });
   }
-  const list = filtered.map((s) => ({
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    content: s.content,
-    imageUrl: s.imageUrl,
-    madeByAI: s.madeByAI,
-    views: s.views,
-    createdAt: s.createdAt,
-    commentCount: s.comments.length,
-    author: userMap[s.userId] ? { username: userMap[s.userId].username, profileImageUrl: userMap[s.userId].profileImageUrl } : { username: "unknown", profileImageUrl: null },
-  }));
+  const list = filtered.map((s) => {
+    const authorUser = userMap[s.userId];
+    return {
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      content: s.content,
+      imageUrl: s.imageUrl,
+      madeByAI: s.madeByAI,
+      views: s.views,
+      verified: s.verified ?? false,
+      createdAt: s.createdAt,
+      commentCount: s.comments.length,
+      author: authorUser
+        ? { username: authorUser.username, profileImageUrl: authorUser.profileImageUrl, role: authorUser.role ?? "user" }
+        : { username: "unknown", profileImageUrl: null, role: "user" },
+    };
+  });
   return NextResponse.json({ scripts: list });
 }
 
