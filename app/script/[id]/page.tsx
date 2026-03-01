@@ -90,7 +90,8 @@ export default function ScriptEditorPage() {
         return;
       }
       if (!res.ok) {
-        setMessages((m) => [...m, { role: "assistant", content: data.error || "Something went wrong." }]);
+        const errMsg = data.detail ? `${data.error}: ${data.detail}` : (data.error || "Something went wrong.");
+        setMessages((m) => [...m, { role: "assistant", content: errMsg }]);
         return;
       }
       setCredits(data.credits ?? credits);

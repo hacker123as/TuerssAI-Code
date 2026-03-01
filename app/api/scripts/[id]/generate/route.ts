@@ -29,6 +29,13 @@ export async function POST(
     return NextResponse.json({ error: "message required" }, { status: 400 });
   }
 
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json(
+      { error: "Generation failed. Please try again.", detail: "GEMINI_API_KEY is not set. Add it in Vercel Environment Variables." },
+      { status: 500 }
+    );
+  }
+
   try {
     const model = getTuerAiModel();
     const historyList = Array.isArray(history) ? history : [];
@@ -40,7 +47,21 @@ export async function POST(
     const prompt = parts.join("\n\n");
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const text = response.text() || "";
+
+    // Handle blocked or empty response (Gemini can block or return no candidates)
+    const candidate = response.candidates?.[0];
+    if (!candidate?.content?.parts?.length) {
+      const blockReason = candidate?.finishReason ?? response.promptFeedback?.blockReason ?? "No content returned";
+      throw new Error(`AI response blocked or empty: ${blockReason}`);
+    }
+
+    let text = "";
+    try {
+      text = response.text() ?? "";
+    } catch {
+      text = candidate.content.parts.map((p: { text?: string }) => p.text ?? "").join("");
+    }
+
     const code = extractLuaFromResponse(text) ?? text;
 
     await prisma.user.update({
@@ -59,9 +80,10 @@ export async function POST(
       credits: updatedUser?.credits ?? user.credits - CREDITS_PER_GENERATION,
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("TuerAi generate error:", err);
     return NextResponse.json(
-      { error: "Generation failed. Please try again." },
+      { error: "Generation failed. Please try again.", detail: message },
       { status: 500 }
     );
   }
