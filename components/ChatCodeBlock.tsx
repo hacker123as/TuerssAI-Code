@@ -23,7 +23,7 @@ const theme = {
 export function ChatCodeBlock({ code, language = "lua" }: { code: string; language?: string }) {
   return (
     <Highlight
-      prism={Prism as unknown as import("prism-react-renderer").Prism}
+      prism={Prism as any}
       code={code.trimEnd()}
       language={language as Language}
       theme={theme}
