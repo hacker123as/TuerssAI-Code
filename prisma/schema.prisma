@@ -45,3 +45,36 @@ model Script {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
+
+model CommunityScript {
+  id          String   @id @default(cuid()) @map("_id")
+  userId      String   // author
+  title       String
+  description String?  @default("")
+  content     String   @default("") // script code at time of share
+  imageUrl    String?  // optional preview image (data URL or stored)
+  madeByAI    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  comments    Comment[]
+}
+
+model Comment {
+  id                String   @id @default(cuid()) @map("_id")
+  communityScriptId String
+  userId            String
+  content           String
+  createdAt         DateTime @default(now())
+  script            CommunityScript @relation(fields: [communityScriptId], references: [id])
+}
+
+model Report {
+  id         String   @id @default(cuid()) @map("_id")
+  reporterId String   // user who reported
+  targetType String   // "script" | "account"
+  targetId   String   // CommunityScript id or User id
+  reason     String   // inappropriate_script, malicious_script, inappropriate_images, inappropriate_username, other
+  details    String?  // for "other"
+  status     String   @default("pending") // pending, reviewed, dismissed
+  createdAt  DateTime @default(now())
+}

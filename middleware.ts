@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const isAuth = !!token;
   const path = request.nextUrl.pathname;
 
-  const protectedPaths = ["/dashboard", "/script", "/settings"];
+  const protectedPaths = ["/dashboard", "/script", "/settings", "/community", "/profile"];
   const isProtected = protectedPaths.some((p) => path.startsWith(p));
   if (isProtected && !isAuth) {
     const login = new URL("/login", request.url);
@@ -17,5 +17,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*", "/script", "/script/:path*", "/settings", "/settings/:path*"],
+  matcher: ["/dashboard", "/dashboard/:path*", "/script", "/script/:path*", "/settings", "/settings/:path*", "/community", "/community/:path*", "/profile", "/profile/:path*"],
 };

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowLeft, Send, Check, X, Zap, Loader2, Save, Copy, CheckCheck, FileCode } from "lucide-react";
+import { ArrowLeft, Send, Check, X, Zap, Loader2, Save, Copy, CheckCheck, FileCode, Upload } from "lucide-react";
 import { ChatCodeBlock } from "@/components/ChatCodeBlock";
 import { AppSidebar } from "@/components/AppSidebar";
 
@@ -41,6 +41,12 @@ export default function ScriptEditorPage() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
   const [sidebarUser, setSidebarUser] = useState<{ id: string; username: string; credits: number; profileImageUrl?: string | null } | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadDescription, setUploadDescription] = useState("");
+  const [uploadImageUrl, setUploadImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   const loadScript = useCallback(async () => {
     const res = await fetch(`/api/scripts/${id}`);
@@ -320,6 +326,46 @@ export default function ScriptEditorPage() {
     navigator.clipboard.writeText(code);
   }
 
+  function openUploadModal() {
+    setUploadTitle(title);
+    setUploadDescription("");
+    setUploadImageUrl(null);
+    setUploadError("");
+    setUploadModalOpen(true);
+  }
+
+  async function submitUpload(e: React.FormEvent) {
+    e.preventDefault();
+    setUploadError("");
+    if (!uploadTitle.trim()) {
+      setUploadError("Title is required");
+      return;
+    }
+    setUploading(true);
+    try {
+      const res = await fetch("/api/community", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: uploadTitle.trim(),
+          description: uploadDescription.trim() || undefined,
+          content,
+          imageUrl: uploadImageUrl,
+          madeByAI: messages.some((m) => m.role === "assistant"),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setUploadError(data.error || "Upload failed");
+        return;
+      }
+      setUploadModalOpen(false);
+      router.push("/community");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   let lastAssistantCodeIndex = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === "assistant" && messages[i].code) {
@@ -383,6 +429,13 @@ export default function ScriptEditorPage() {
                 <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save"}
               </>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={openUploadModal}
+            className="flex items-center gap-2 rounded-lg border border-sand-500/50 bg-sand-500/10 px-4 py-2 text-sm font-medium text-sand-200 transition hover:bg-sand-500/20 hover:text-white"
+          >
+            <Upload className="h-4 w-4" /> Upload to community
           </button>
           {credits !== null && (
             <div className="flex items-center gap-2 rounded-full border border-sand-600/50 bg-sand-800/30 px-4 py-2">
@@ -619,6 +672,86 @@ export default function ScriptEditorPage() {
         </div>
       </div>
       </div>
+
+      {/* Upload to community modal */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !uploading && setUploadModalOpen(false)}>
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#141414] p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-white">Upload to community</h3>
+            <p className="mt-1 text-sm text-sand-500">Share this script on the community feed. Others can view and comment.</p>
+            <form onSubmit={submitUpload} className="mt-4 space-y-4">
+              {uploadError && <p className="text-sm text-red-400">{uploadError}</p>}
+              <div>
+                <label className="block text-sm font-medium text-sand-400">Title *</label>
+                <input
+                  type="text"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  placeholder="Script title"
+                  className="mt-1 w-full rounded-lg border border-white/20 bg-[#0d0d0d] px-3 py-2 text-white placeholder:text-sand-600 focus:border-sand-500 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-sand-400">Description (optional)</label>
+                <textarea
+                  value={uploadDescription}
+                  onChange={(e) => setUploadDescription(e.target.value)}
+                  placeholder="What does this script do?"
+                  rows={2}
+                  className="mt-1 w-full rounded-lg border border-white/20 bg-[#0d0d0d] px-3 py-2 text-sm text-white placeholder:text-sand-600 focus:border-sand-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-sand-400">Image (optional)</label>
+                <p className="mt-0.5 text-xs text-sand-500">Preview image for the community post. If you don&apos;t add one, it will show &quot;No image available&quot;.</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="upload-community-image"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.type.startsWith("image/")) {
+                        const reader = new FileReader();
+                        reader.onload = () => setUploadImageUrl(reader.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                  <label htmlFor="upload-community-image" className="cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-sand-300 hover:bg-white/10">
+                    Choose image
+                  </label>
+                  {uploadImageUrl && (
+                    <div className="relative">
+                      <img src={uploadImageUrl} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                      <button type="button" onClick={() => setUploadImageUrl(null)} className="absolute -right-1 -top-1 rounded-full bg-red-600 p-0.5 text-white">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {messages.some((m) => m.role === "assistant") && (
+                <p className="text-xs text-sand-500">This will be labeled &quot;Script made by AI&quot; since you used TuerAi.</p>
+              )}
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => !uploading && setUploadModalOpen(false)} className="flex-1 rounded-lg border border-white/20 py-2 text-sm text-sand-400 hover:bg-white/10">
+                  Cancel
+                </button>
+                <button type="submit" disabled={uploading} className="flex-1 rounded-lg bg-sand-500 py-2 text-sm font-medium text-white hover:bg-sand-400 disabled:opacity-50">
+                  {uploading ? "Uploading…" : "Upload"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
