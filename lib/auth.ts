@@ -38,12 +38,12 @@ export async function getUserFromSession() {
   if (!session) return null;
   const user = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { id: true, email: true, username: true, credits: true, lastDailyGrant: true },
+    select: { id: true, email: true, username: true, credits: true, lastDailyGrant: true, profileImageUrl: true, theme: true, aiLanguage: true, plan: true },
   });
   return user;
 }
 
-const DAILY_CREDITS = 20;
+const DAILY_CREDITS = 10; // free users get 10 generations per day
 
 export async function ensureDailyCredits(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });

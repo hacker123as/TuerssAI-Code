@@ -8,16 +8,31 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid()) @map("_id")
-  email         String   @unique
-  username      String   @unique
-  passwordHash  String
-  emailVerified Boolean  @default(false)
-  credits       Int      @default(20)
-  lastDailyGrant String? // ISO date of last daily credit grant
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  scripts       Script[]
+  id              String   @id @default(cuid()) @map("_id")
+  email           String   @unique
+  username        String   @unique
+  passwordHash    String
+  emailVerified   Boolean  @default(false)
+  credits         Int      @default(20)
+  lastDailyGrant  String?  // ISO date of last daily credit grant
+  profileImageUrl String?  // data URL or stored URL for avatar
+  theme           String?  // "dark" | "light" | "system"
+  aiLanguage      String?  // e.g. "en", "es" - preferred language for AI replies
+  plan            String?  // e.g. "free", "pro" - for display
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  scripts         Script[]
+}
+
+model RedeemKey {
+  id        String    @id @default(cuid()) @map("_id")
+  code      String    @unique // the key string users enter
+  credits   Int       // generations granted when redeemed
+  plan      String?   // optional plan name
+  expiresAt DateTime? // optional expiry
+  usedById  String?   // userId who redeemed (null = unused)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 model Script {

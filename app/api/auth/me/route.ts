@@ -6,9 +6,10 @@ export async function GET() {
   if (!user) return NextResponse.json({ user: null }, { status: 401 });
   await ensureDailyCredits(user.id);
   const updated = await getUserFromSession();
+  const u = updated || user;
   return NextResponse.json({
-    user: updated
-      ? { id: updated.id, email: updated.email, username: updated.username, credits: updated.credits }
-      : { id: user.id, email: user.email, username: user.username, credits: user.credits },
+    user: u
+      ? { id: u.id, email: u.email, username: u.username, credits: u.credits, profileImageUrl: u.profileImageUrl ?? null, theme: u.theme ?? null, aiLanguage: u.aiLanguage ?? null, plan: u.plan ?? null }
+      : null,
   });
 }

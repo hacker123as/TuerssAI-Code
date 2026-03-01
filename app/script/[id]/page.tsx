@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft, Send, Check, X, Zap, Loader2, Save, Copy, CheckCheck, FileCode } from "lucide-react";
 import { ChatCodeBlock } from "@/components/ChatCodeBlock";
+import { AppSidebar } from "@/components/AppSidebar";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -37,6 +38,9 @@ export default function ScriptEditorPage() {
   const selectionRangeRef = useRef<{ start: number; end: number } | null>(null);
   const decorationIdsRef = useRef<string[]>([]);
   const [highlightLines, setHighlightLines] = useState<{ startLine: number; endLine: number } | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState("");
+  const [sidebarUser, setSidebarUser] = useState<{ id: string; username: string; credits: number; profileImageUrl?: string | null } | null>(null);
 
   const loadScript = useCallback(async () => {
     const res = await fetch(`/api/scripts/${id}`);
@@ -65,6 +69,7 @@ export default function ScriptEditorPage() {
     if (res.ok) {
       const data = await res.json();
       setCredits(data.user?.credits ?? 0);
+      setSidebarUser(data.user ?? null);
     }
   }, []);
 
@@ -108,22 +113,37 @@ export default function ScriptEditorPage() {
     return () => clearTimeout(timeout);
   }, [highlightLines]);
 
-  async function saveScript(newContent: string, newTitle?: string) {
+  async function saveScript(newContent?: string, newTitle?: string) {
     setSaving(true);
     try {
+      const body: { content?: string; title?: string } = {};
+      if (newContent !== undefined) body.content = newContent;
+      if (newTitle !== undefined) body.title = newTitle;
       await fetch(`/api/scripts/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newContent, ...(newTitle && { title: newTitle }) }),
+        body: JSON.stringify(body),
       });
-      setContent(newContent);
-      if (newTitle) setTitle(newTitle);
-      setPendingCode(null);
+      if (newContent !== undefined) setContent(newContent);
+      if (newTitle !== undefined) setTitle(newTitle);
+      if (newContent !== undefined) setPendingCode(null);
       setSavedAt(Date.now());
       setTimeout(() => setSavedAt(null), 2000);
     } finally {
       setSaving(false);
     }
+  }
+
+  function startEditingTitle() {
+    setTitleInput(title);
+    setEditingTitle(true);
+  }
+
+  function submitTitleEdit() {
+    const t = titleInput.trim() || "Untitled Script";
+    setEditingTitle(false);
+    if (t === title) return;
+    saveScript(undefined, t);
   }
 
   async function saveConversation(msgs: Message[]) {
@@ -309,7 +329,9 @@ export default function ScriptEditorPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-[#0d0d0d] text-sand-100">
+    <div className="flex h-screen bg-[#0d0d0d] text-sand-100">
+      <AppSidebar user={sidebarUser} />
+      <div className="flex flex-1 min-h-0 flex-col">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#141414] px-5 shadow-lg">
         <div className="flex items-center gap-4">
           <Link
@@ -320,8 +342,26 @@ export default function ScriptEditorPage() {
           </Link>
           <div className="h-5 w-px bg-white/20" />
           <div className="flex items-center gap-2">
-            <FileCode className="h-4 w-4 text-sand-500" />
-            <span className="font-mono text-sm font-medium text-white">{title}</span>
+            <FileCode className="h-4 w-4 text-sand-500 shrink-0" />
+            {editingTitle ? (
+              <input
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onBlur={submitTitleEdit}
+                onKeyDown={(e) => e.key === "Enter" && submitTitleEdit()}
+                className="min-w-[120px] rounded border border-white/20 bg-[#0d0d0d] px-2 py-1 font-mono text-sm text-white focus:border-sand-500 focus:outline-none"
+                autoFocus
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={startEditingTitle}
+                className="font-mono text-sm font-medium text-white hover:text-sand-200 underline-offset-2 hover:underline"
+              >
+                {title}
+              </button>
+            )}
           </div>
           <span className="rounded-md bg-sand-700/50 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-sand-400">
             Lua
@@ -577,6 +617,7 @@ export default function ScriptEditorPage() {
             </p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -57,8 +57,12 @@ export async function POST(
         ? `Session recap (remember these so you can refer back—variable names, what you added, etc.):\n${recapLines.join("\n")}`
         : "";
 
+    const langHint = user.aiLanguage
+      ? `\nImportant: When replying in text (not code), respond in ${user.aiLanguage === "es" ? "Spanish" : user.aiLanguage === "fr" ? "French" : user.aiLanguage === "de" ? "German" : user.aiLanguage === "pt" ? "Portuguese" : user.aiLanguage === "zh" ? "Chinese" : user.aiLanguage === "ja" ? "Japanese" : user.aiLanguage === "ko" ? "Korean" : user.aiLanguage}. Keep code and code comments in English unless the user asked otherwise.`
+      : "";
     const parts = [
       ...(sessionRecap ? [sessionRecap, ""] : []),
+      ...(langHint ? [langHint, ""] : []),
       `Current script content (${hasExistingContent ? "has content—return ONLY the changed section. Put RANGE:startLine,endLine (1-based) on the line right before your lua code block" : "empty—return the full script in one lua code block"}):\n\`\`\`lua\n${script.content || "-- empty"}\n\`\`\``,
       ...(isSelectionEdit
         ? [
