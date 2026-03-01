@@ -6,7 +6,7 @@ import { Zap, LogOut, Settings, Users, LayoutDashboard } from "lucide-react";
 
 type User = {
   id: string;
-  email: string;
+  email?: string;
   username: string;
   credits: number;
   profileImageUrl?: string | null;
