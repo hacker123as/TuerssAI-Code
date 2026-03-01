@@ -604,7 +604,7 @@ export default function ScriptEditorPage() {
                             <Copy className="h-3.5 w-3.5" /> Copy
                           </button>
                         </div>
-                        <div className="min-h-0 flex-1 overflow-auto">
+                        <div className="tuerss-scrollbar-hide min-h-0 flex-1 overflow-auto">
                           <ChatCodeBlock code={msg.code} />
                         </div>
                         {showApplyDecline && (
@@ -654,7 +654,7 @@ export default function ScriptEditorPage() {
                 }}
                 placeholder="Describe what you want… (e.g. make a block that explodes when clicked)"
                 rows={1}
-                className="min-h-[48px] w-full resize-none rounded-xl border border-white/20 bg-[#0d0d0d] px-4 py-3 text-sm text-white placeholder:text-sand-500 focus:border-sand-500 focus:outline-none focus:ring-2 focus:ring-sand-500/30"
+                className="tuerss-scrollbar-hide min-h-[48px] w-full resize-none rounded-xl border border-white/20 bg-[#0d0d0d] px-4 py-3 text-sm text-white placeholder:text-sand-500 focus:border-sand-500 focus:outline-none focus:ring-2 focus:ring-sand-500/30"
                 disabled={loading}
               />
               <button

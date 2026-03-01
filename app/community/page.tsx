@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileCode, MessageCircle, Bot, User } from "lucide-react";
+import { FileCode, MessageCircle, Bot, User, Search, Eye } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 
 type Author = { username: string; profileImageUrl?: string | null };
@@ -14,20 +14,79 @@ type CommunityScript = {
   content: string;
   imageUrl: string | null;
   madeByAI: boolean;
+  views: number;
   createdAt: string;
   commentCount: number;
   author: Author;
 };
 
+type Section = "popular" | "recent" | "ai";
+
+function ScriptCard({ s }: { s: CommunityScript }) {
+  return (
+    <Link
+      href={`/community/${s.id}`}
+      className="block rounded-2xl border border-white/10 bg-[#141414] transition hover:border-white/20 hover:bg-[#1a1a1a]"
+    >
+      <div className="flex gap-4 p-5">
+        <div className="shrink-0">
+          {s.author.profileImageUrl ? (
+            <img src={s.author.profileImageUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sand-600/50 text-sm font-medium text-white">
+              {(s.author.username || "?").slice(0, 1).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-white">{s.author.username}</span>
+            <span className="text-xs text-sand-500">{new Date(s.createdAt).toLocaleDateString()}</span>
+            {s.madeByAI ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                <Bot className="h-3 w-3" /> AI
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-sand-600/30 px-2 py-0.5 text-[10px] text-sand-400">
+                <User className="h-3 w-3" /> User
+              </span>
+            )}
+          </div>
+          <h2 className="mt-1 font-semibold text-white">{s.title}</h2>
+          {s.description && <p className="mt-1 line-clamp-2 text-sm text-sand-400">{s.description}</p>}
+          <div className="mt-3 flex items-center gap-4 text-xs text-sand-500">
+            <span className="flex items-center gap-1">
+              <Eye className="h-3.5 w-3.5" /> {s.views} view{s.views !== 1 ? "s" : ""}
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageCircle className="h-3.5 w-3.5" /> {s.commentCount} comment{s.commentCount !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
+        <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-[#0d0d0d]">
+          {s.imageUrl ? (
+            <img src={s.imageUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[10px] text-sand-600">No image</div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function CommunityPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ id: string; username: string; credits: number; profileImageUrl?: string | null } | null>(null);
+  const [user, setUser] = useState<{ id: string; username: string; credits?: number; profileImageUrl?: string | null } | null>(null);
   const [scripts, setScripts] = useState<CommunityScript[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [section, setSection] = useState<Section>("popular");
   const [seeding, setSeeding] = useState(false);
 
-  const loadScripts = useCallback(async () => {
-    const res = await fetch("/api/community");
+  const loadScripts = useCallback(async (query?: string) => {
+    const url = query !== undefined ? `/api/community?q=${encodeURIComponent(query)}` : "/api/community";
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       setScripts(data.scripts || []);
@@ -54,15 +113,35 @@ export default function CommunityPage() {
     })();
   }, [router]);
 
-  async function seedTestScripts() {
-    setSeeding(true);
-    try {
-      const res = await fetch("/api/community/seed", { method: "POST" });
-      if (res.ok) await loadScripts();
-    } finally {
-      setSeeding(false);
-    }
-  }
+  useEffect(() => {
+    if (loading || scripts.length > 0) return;
+    (async () => {
+      setSeeding(true);
+      try {
+        const res = await fetch("/api/community/seed", { method: "POST" });
+        if (res.ok) await loadScripts();
+      } finally {
+        setSeeding(false);
+      }
+    })();
+  }, [loading, scripts.length, loadScripts]);
+
+  const searchLower = search.trim().toLowerCase();
+  const bySearch = searchLower
+    ? scripts.filter(
+        (s) =>
+          s.title.toLowerCase().includes(searchLower) ||
+          (s.description || "").toLowerCase().includes(searchLower) ||
+          s.author.username.toLowerCase().includes(searchLower)
+      )
+    : scripts;
+
+  const filteredBySection =
+    section === "recent"
+      ? [...bySearch].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      : section === "ai"
+      ? bySearch.filter((s) => s.madeByAI)
+      : bySearch;
 
   if (loading) {
     return (
@@ -81,79 +160,60 @@ export default function CommunityPage() {
       <main className="tuerss-scrollbar-hide min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto max-w-3xl px-5 py-8">
           <h1 className="mb-2 text-2xl font-bold text-white">Community</h1>
-          <p className="mb-8 text-sm text-sand-500">Scripts shared by the community. Upload from the script editor.</p>
+          <p className="mb-6 text-sm text-sand-500">Scripts shared by the community. Upload from the script editor.</p>
 
-          {scripts.length === 0 ? (
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sand-500" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search scripts, authors..."
+                className="w-full rounded-xl border border-white/20 bg-[#141414] py-2.5 pl-10 pr-4 text-white placeholder:text-sand-500 focus:border-sand-500 focus:outline-none"
+              />
+            </div>
+            <div className="flex gap-2 rounded-xl border border-white/10 bg-[#141414] p-1">
+              {(["popular", "recent", "ai"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSection(s)}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition ${
+                    section === s ? "bg-sand-500/20 text-sand-200" : "text-sand-500 hover:text-white"
+                  }`}
+                >
+                  {s === "ai" ? "Made with AI" : s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {seeding ? (
+            <div className="rounded-2xl border border-white/10 bg-[#141414] p-12 text-center text-sand-500">
+              Loading sample scripts…
+            </div>
+          ) : filteredBySection.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-white/20 bg-[#141414] p-12 text-center">
               <FileCode className="mx-auto h-12 w-12 text-sand-500" />
-              <p className="mt-4 text-sand-300">No scripts shared yet</p>
-              <p className="mt-1 text-sm text-sand-500">Create a script, then use &quot;Upload to community&quot; in the editor to share.</p>
-              <p className="mt-4 text-xs text-sand-600">Or load 10 sample scripts (uses test account):</p>
-              <button
-                type="button"
-                onClick={seedTestScripts}
-                disabled={seeding}
-                className="mt-2 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-sand-400 hover:bg-white/10 disabled:opacity-50"
-              >
-                {seeding ? "Loading…" : "Load sample scripts"}
-              </button>
+              <p className="mt-4 text-sand-300">No scripts found</p>
+              <p className="mt-1 text-sm text-sand-500">
+                {search ? "Try a different search." : "Create a script and use &quot;Upload to community&quot; in the editor to share."}
+              </p>
             </div>
           ) : (
-            <ul className="space-y-4">
-              {scripts.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    href={`/community/${s.id}`}
-                    className="block rounded-2xl border border-white/10 bg-[#141414] transition hover:border-white/20 hover:bg-[#1a1a1a]"
-                  >
-                    <div className="flex gap-4 p-5">
-                      <div className="shrink-0">
-                        {s.author.profileImageUrl ? (
-                          <img src={s.author.profileImageUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
-                        ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sand-600/50 text-sm font-medium text-white">
-                            {(s.author.username || "?").slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium text-white">{s.author.username}</span>
-                          <span className="text-xs text-sand-500">
-                            {new Date(s.createdAt).toLocaleDateString()}
-                          </span>
-                          {s.madeByAI ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
-                              <Bot className="h-3 w-3" /> Script made by AI
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-sand-600/30 px-2 py-0.5 text-[10px] text-sand-400">
-                              <User className="h-3 w-3" /> Made by user
-                            </span>
-                          )}
-                        </div>
-                        <h2 className="mt-1 font-semibold text-white">{s.title}</h2>
-                        {s.description && (
-                          <p className="mt-1 line-clamp-2 text-sm text-sand-400">{s.description}</p>
-                        )}
-                        <div className="mt-3 flex items-center gap-3 text-xs text-sand-500">
-                          <span className="flex items-center gap-1">
-                            <MessageCircle className="h-3.5 w-3.5" /> {s.commentCount} comment{s.commentCount !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-[#0d0d0d]">
-                        {s.imageUrl ? (
-                          <img src={s.imageUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[10px] text-sand-600">No image</div>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <>
+              <h2 className="mb-4 text-lg font-semibold text-white">
+                {section === "popular" ? "Popular" : section === "recent" ? "Recent" : "Made with AI"}
+              </h2>
+              <ul className="space-y-4">
+                {filteredBySection.map((s) => (
+                  <li key={s.id}>
+                    <ScriptCard s={s} />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       </main>

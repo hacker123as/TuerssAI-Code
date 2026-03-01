@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MessageCircle, Bot, User, Flag, Send } from "lucide-react";
+import { ArrowLeft, MessageCircle, Bot, User, Flag, Send, Copy, Eye, Check } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ChatCodeBlock } from "@/components/ChatCodeBlock";
 
@@ -16,6 +16,7 @@ type ScriptDetail = {
   content: string;
   imageUrl: string | null;
   madeByAI: boolean;
+  views?: number;
   createdAt: string;
   author: Author;
   comments: Comment[];
@@ -41,6 +42,7 @@ export default function CommunityScriptPage() {
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     const [meRes, scriptRes] = await Promise.all([
@@ -224,9 +226,32 @@ export default function CommunityScriptPage() {
               </div>
             )}
 
-            <div className="mt-4 rounded-xl border border-white/10 bg-[#0d0d0d] p-4">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sand-500">Script</p>
-              <ChatCodeBlock code={script.content || "-- empty --"} />
+            <div className="mt-4 rounded-xl border border-white/10 bg-[#0d0d0d] overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/10 bg-[#141414] px-4 py-2">
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-medium uppercase tracking-wider text-sand-500">Script</p>
+                  {script.views != null && (
+                    <span className="flex items-center gap-1 text-xs text-sand-500">
+                      <Eye className="h-3.5 w-3.5" /> {script.views} view{script.views !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(script.content || "");
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-sand-300 hover:bg-white/10 hover:text-white"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <div className="p-4 tuerss-scrollbar-hide max-h-[60vh] overflow-y-auto">
+                <ChatCodeBlock code={script.content || "-- empty --"} />
+              </div>
             </div>
           </article>
 

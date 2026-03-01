@@ -11,6 +11,10 @@ export async function GET(
     include: { comments: true },
   });
   if (!script) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await prisma.communityScript.update({
+    where: { id },
+    data: { views: { increment: 1 } },
+  });
   const author = await prisma.user.findUnique({
     where: { id: script.userId },
     select: { id: true, username: true, profileImageUrl: true },
@@ -23,6 +27,7 @@ export async function GET(
   const userMap = Object.fromEntries(commentUsers.map((u) => [u.id, u]));
   return NextResponse.json({
     ...script,
+    views: script.views + 1,
     author: author ? { username: author.username, profileImageUrl: author.profileImageUrl } : { username: "unknown", profileImageUrl: null },
     comments: script.comments.map((c) => ({
       id: c.id,

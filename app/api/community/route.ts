@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { getUserFromSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const q = (searchParams.get("q") || "").trim().toLowerCase();
   const scripts = await prisma.communityScript.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
+    orderBy: [{ views: "desc" }, { createdAt: "desc" }],
+    take: 100,
     include: { comments: true },
   });
   const userIds = Array.from(new Set(scripts.map((s) => s.userId)));
@@ -14,13 +16,25 @@ export async function GET() {
     select: { id: true, username: true, profileImageUrl: true },
   });
   const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
-  const list = scripts.map((s) => ({
+  let filtered = scripts;
+  if (q) {
+    filtered = scripts.filter((s) => {
+      const author = (userMap[s.userId]?.username || "").toLowerCase();
+      return (
+        s.title.toLowerCase().includes(q) ||
+        (s.description || "").toLowerCase().includes(q) ||
+        author.includes(q)
+      );
+    });
+  }
+  const list = filtered.map((s) => ({
     id: s.id,
     title: s.title,
     description: s.description,
     content: s.content,
     imageUrl: s.imageUrl,
     madeByAI: s.madeByAI,
+    views: s.views,
     createdAt: s.createdAt,
     commentCount: s.comments.length,
     author: userMap[s.userId] ? { username: userMap[s.userId].username, profileImageUrl: userMap[s.userId].profileImageUrl } : { username: "unknown", profileImageUrl: null },
