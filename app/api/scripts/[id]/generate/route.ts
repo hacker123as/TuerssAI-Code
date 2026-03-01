@@ -24,10 +24,16 @@ export async function POST(
   if (!script) return NextResponse.json({ error: "Script not found" }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
-  const { message, history } = body as { message?: string; history?: Array<{ role: string; content: string }> };
+  const { message, history, selectedCode } = body as {
+    message?: string;
+    history?: Array<{ role: string; content: string }>;
+    selectedCode?: string;
+  };
   if (!message || typeof message !== "string") {
     return NextResponse.json({ error: "message required" }, { status: 400 });
   }
+
+  const isSelectionEdit = Boolean(selectedCode && selectedCode.trim().length > 0);
 
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
@@ -41,6 +47,12 @@ export async function POST(
     const historyList = Array.isArray(history) ? history : [];
     const parts = [
       `Current script content:\n\`\`\`lua\n${script.content || "-- empty"}\n\`\`\``,
+      ...(isSelectionEdit
+        ? [
+            "",
+            `Selected code to edit (return ONLY the replacement for this part, not the full script):\n\`\`\`lua\n${selectedCode!.trim()}\n\`\`\``,
+          ]
+        : []),
       ...historyList.map((h) => `${h.role === "user" ? "User" : "TuerAi"}: ${h.content}`),
       `User: ${message}`,
     ];
@@ -74,9 +86,11 @@ export async function POST(
       select: { credits: true },
     });
 
+    const replyWithoutCode = text.replace(/```[\s\S]*?```/g, "").trim();
     return NextResponse.json({
-      reply: text,
+      reply: replyWithoutCode || text,
       code,
+      isPartial: isSelectionEdit,
       credits: updatedUser?.credits ?? user.credits - CREDITS_PER_GENERATION,
     });
   } catch (err) {

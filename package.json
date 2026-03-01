@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "prism-react-renderer": "^2.4.0",
+    "prismjs": "^1.29.0",
     "@monaco-editor/react": "^4.6.0",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",

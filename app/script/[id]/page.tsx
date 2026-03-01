@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft, Send, Check, X, Zap, Loader2, Save, Copy, CheckCheck, FileCode } from "lucide-react";
+import { ChatCodeBlock } from "@/components/ChatCodeBlock";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
-type Message = { role: "user" | "assistant"; content: string; code?: string };
+type Message = { role: "user" | "assistant"; content: string; code?: string; isPartial?: boolean };
 
 const EDITOR_MIN_PCT = 28;
 const EDITOR_MAX_PCT = 72;
@@ -28,7 +29,10 @@ export default function ScriptEditorPage() {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [editorWidth, setEditorWidth] = useState(50);
   const [resizing, setResizing] = useState(false);
+  const [pendingIsPartial, setPendingIsPartial] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<import("monaco-editor").editor.IStandaloneCodeEditor | null>(null);
+  const selectionRangeRef = useRef<{ start: number; end: number } | null>(null);
 
   const loadScript = useCallback(async () => {
     const res = await fetch(`/api/scripts/${id}`);
@@ -83,6 +87,19 @@ export default function ScriptEditorPage() {
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
+    selectionRangeRef.current = null;
+    let selectedCode = "";
+    const editor = editorRef.current;
+    if (editor) {
+      const model = editor.getModel();
+      const sel = editor.getSelection();
+      if (model && sel && !sel.isEmpty()) {
+        selectedCode = model.getValueInRange(sel);
+        const start = model.getOffsetAt(sel.getStartPosition());
+        const end = model.getOffsetAt(sel.getEndPosition());
+        selectionRangeRef.current = { start, end };
+      }
+    }
     try {
       const history = messages.map((msg) => ({
         role: msg.role,
@@ -91,7 +108,11 @@ export default function ScriptEditorPage() {
       const res = await fetch(`/api/scripts/${id}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({
+          message: text,
+          history,
+          ...(selectedCode ? { selectedCode } : {}),
+        }),
       });
       const data = await res.json();
       if (res.status === 402) {
@@ -108,11 +129,20 @@ export default function ScriptEditorPage() {
         return;
       }
       setCredits(data.credits ?? credits);
+      const isPartial = Boolean(data.isPartial);
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: data.reply || "Here's the code.", code: data.code || undefined },
+        {
+          role: "assistant",
+          content: data.reply || "Here's the code.",
+          code: data.code || undefined,
+          isPartial,
+        },
       ]);
-      if (data.code) setPendingCode(data.code);
+      if (data.code) {
+        setPendingCode(data.code);
+        setPendingIsPartial(isPartial);
+      }
     } catch {
       setMessages((m) => [...m, { role: "assistant", content: "Failed to get a response. Try again." }]);
     } finally {
@@ -122,13 +152,26 @@ export default function ScriptEditorPage() {
 
   function applyPending() {
     if (!pendingCode) return;
-    setContent(pendingCode);
+    let newContent: string;
+    if (pendingIsPartial && selectionRangeRef.current) {
+      const { start, end } = selectionRangeRef.current;
+      const startClamp = Math.max(0, Math.min(start, content.length));
+      const endClamp = Math.max(startClamp, Math.min(end, content.length));
+      newContent = content.slice(0, startClamp) + pendingCode.trimEnd() + content.slice(endClamp);
+    } else {
+      newContent = pendingCode;
+    }
+    setContent(newContent);
     setPendingCode(null);
-    saveScript(pendingCode);
+    setPendingIsPartial(false);
+    selectionRangeRef.current = null;
+    saveScript(newContent);
   }
 
   function declinePending() {
     setPendingCode(null);
+    setPendingIsPartial(false);
+    selectionRangeRef.current = null;
   }
 
   useEffect(() => {
@@ -227,6 +270,9 @@ export default function ScriptEditorPage() {
               theme="tuerss-dark"
               value={content}
               onChange={(v) => setContent(v ?? "")}
+              onMount={(editor) => {
+                editorRef.current = editor;
+              }}
               beforeMount={(monaco) => {
                 monaco.editor.defineTheme("tuerss-dark", {
                   base: "vs-dark",
@@ -361,9 +407,7 @@ export default function ScriptEditorPage() {
                             <Copy className="h-3.5 w-3.5" /> Copy
                           </button>
                         </div>
-                        <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed text-sand-200 font-mono">
-                          {msg.code}
-                        </pre>
+                        <ChatCodeBlock code={msg.code} />
                         {showApplyDecline && (
                           <div className="flex items-center gap-2 border-t border-white/10 bg-[#141414] px-4 py-3">
                             <button
@@ -423,7 +467,7 @@ export default function ScriptEditorPage() {
               </button>
             </div>
             <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] text-sand-600">
-              1 generation per request · TuerAi remembers this conversation
+              1 generation per request · TuerAi remembers this conversation · Select code to edit only that part
             </p>
           </div>
         </div>
