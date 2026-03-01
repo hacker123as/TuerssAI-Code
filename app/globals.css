@@ -19,3 +19,8 @@
 body {
   @apply bg-sand-100 text-sand-950;
 }
+
+/* Green highlight for applied code in script editor (Monaco line decoration) */
+.tuerss-applied-highlight {
+  background: rgba(34, 197, 94, 0.22) !important;
+}

@@ -32,7 +32,10 @@ export default function ScriptEditorPage() {
   const [pendingIsPartial, setPendingIsPartial] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<import("monaco-editor").editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const selectionRangeRef = useRef<{ start: number; end: number } | null>(null);
+  const decorationIdsRef = useRef<string[]>([]);
+  const [highlightLines, setHighlightLines] = useState<{ startLine: number; endLine: number } | null>(null);
 
   const loadScript = useCallback(async () => {
     const res = await fetch(`/api/scripts/${id}`);
@@ -62,6 +65,37 @@ export default function ScriptEditorPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (!highlightLines || !editorRef.current || !monacoRef.current) return;
+    const monaco = monacoRef.current;
+    const editor = editorRef.current;
+    const { startLine, endLine } = highlightLines;
+    const timeout = setTimeout(() => {
+      try {
+        const model = editor.getModel();
+        if (!model) return;
+        const lineCount = model.getLineCount();
+        const end = Math.min(endLine, lineCount);
+        if (startLine > end) return;
+        const endColumn = model.getLineMaxColumn(end);
+        const range = new monaco.Range(startLine, 1, end, endColumn);
+        const newIds = editor.deltaDecorations(decorationIdsRef.current, [
+          { range, options: { isWholeLine: true, className: "tuerss-applied-highlight" } },
+        ]);
+        decorationIdsRef.current = newIds;
+        const clearTimeout = window.setTimeout(() => {
+          editor.deltaDecorations(decorationIdsRef.current, []);
+          decorationIdsRef.current = [];
+          setHighlightLines(null);
+        }, 3000);
+        return () => window.clearTimeout(clearTimeout);
+      } catch {
+        setHighlightLines(null);
+      }
+    }, 80);
+    return () => clearTimeout(timeout);
+  }, [highlightLines]);
 
   async function saveScript(newContent: string, newTitle?: string) {
     setSaving(true);
@@ -152,19 +186,30 @@ export default function ScriptEditorPage() {
 
   function applyPending() {
     if (!pendingCode) return;
+    const insertedCode = pendingIsPartial ? pendingCode.trimEnd() : pendingCode;
     let newContent: string;
+    let startLine: number;
+    let endLine: number;
     if (pendingIsPartial && selectionRangeRef.current) {
       const { start, end } = selectionRangeRef.current;
       const startClamp = Math.max(0, Math.min(start, content.length));
       const endClamp = Math.max(startClamp, Math.min(end, content.length));
-      newContent = content.slice(0, startClamp) + pendingCode.trimEnd() + content.slice(endClamp);
+      newContent = content.slice(0, startClamp) + insertedCode + content.slice(endClamp);
+      const beforeInsert = newContent.slice(0, startClamp);
+      const afterInsertEnd = startClamp + insertedCode.length;
+      startLine = beforeInsert.split("\n").length;
+      endLine = newContent.slice(0, afterInsertEnd).split("\n").length;
     } else {
       newContent = pendingCode;
+      const lines = newContent.split("\n");
+      startLine = 1;
+      endLine = lines.length;
     }
     setContent(newContent);
     setPendingCode(null);
     setPendingIsPartial(false);
     selectionRangeRef.current = null;
+    setHighlightLines({ startLine, endLine });
     saveScript(newContent);
   }
 
@@ -274,6 +319,7 @@ export default function ScriptEditorPage() {
                 editorRef.current = editor;
               }}
               beforeMount={(monaco) => {
+                monacoRef.current = monaco;
                 monaco.editor.defineTheme("tuerss-dark", {
                   base: "vs-dark",
                   inherit: true,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUserFromSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getTuerAiModel, extractLuaFromResponse } from "@/lib/gemini";
+import { getTuerAiModel, extractLuaFromResponse, looksLikeLua } from "@/lib/gemini";
 
 const CREDITS_PER_GENERATION = 1;
 
@@ -74,7 +74,8 @@ export async function POST(
       text = candidate.content.parts.map((p: { text?: string }) => p.text ?? "").join("");
     }
 
-    const code = extractLuaFromResponse(text) ?? text;
+    const extracted = extractLuaFromResponse(text);
+    const code = extracted && looksLikeLua(extracted) ? extracted : null;
 
     await prisma.user.update({
       where: { id: user.id },
@@ -89,8 +90,8 @@ export async function POST(
     const replyWithoutCode = text.replace(/```[\s\S]*?```/g, "").trim();
     return NextResponse.json({
       reply: replyWithoutCode || text,
-      code,
-      isPartial: isSelectionEdit,
+      code: code ?? undefined,
+      isPartial: isSelectionEdit && !!code,
       credits: updatedUser?.credits ?? user.credits - CREDITS_PER_GENERATION,
     });
   } catch (err) {
