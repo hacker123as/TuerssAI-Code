@@ -9,7 +9,7 @@ import { ChatCodeBlock } from "@/components/ChatCodeBlock";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
-type Message = { role: "user" | "assistant"; content: string; code?: string; isPartial?: boolean };
+type Message = { role: "user" | "assistant"; content: string; code?: string; isPartial?: boolean; replaceRange?: { startLine: number; endLine: number } };
 
 const EDITOR_MIN_PCT = 28;
 const EDITOR_MAX_PCT = 72;
@@ -30,6 +30,7 @@ export default function ScriptEditorPage() {
   const [editorWidth, setEditorWidth] = useState(50);
   const [resizing, setResizing] = useState(false);
   const [pendingIsPartial, setPendingIsPartial] = useState(false);
+  const [pendingReplaceRange, setPendingReplaceRange] = useState<{ startLine: number; endLine: number } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<import("monaco-editor").editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
@@ -47,6 +48,16 @@ export default function ScriptEditorPage() {
     const data = await res.json();
     setTitle(data.title || "Untitled Script");
     setContent(data.content || "");
+    if (data.conversationHistory) {
+      try {
+        const parsed = JSON.parse(data.conversationHistory) as Message[];
+        if (Array.isArray(parsed)) setMessages(parsed);
+      } catch {
+        setMessages([]);
+      }
+    } else {
+      setMessages([]);
+    }
   }, [id, router]);
 
   const loadUser = useCallback(async () => {
@@ -115,11 +126,26 @@ export default function ScriptEditorPage() {
     }
   }
 
+  async function saveConversation(msgs: Message[]) {
+    try {
+      await fetch(`/api/scripts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationHistory: msgs }),
+      });
+    } catch {
+      // ignore
+    }
+  }
+
   async function sendMessage() {
     const text = input.trim();
     if (!text || loading || (credits !== null && credits < 1)) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }]);
+    const userMessage: Message = { role: "user", content: text };
+    const messagesWithUser = [...messages, userMessage];
+    setMessages(messagesWithUser);
+    saveConversation(messagesWithUser);
     setLoading(true);
     selectionRangeRef.current = null;
     let selectedCode = "";
@@ -134,11 +160,19 @@ export default function ScriptEditorPage() {
         selectionRangeRef.current = { start, end };
       }
     }
+    const MAX_CODE_CONTEXT_LINES = 55;
+    const history = messages.map((msg) => {
+      let content = msg.content;
+      if (msg.code) {
+        const lines = msg.code.split("\n");
+        const context = lines.length > MAX_CODE_CONTEXT_LINES
+          ? lines.slice(0, MAX_CODE_CONTEXT_LINES).join("\n") + "\n..."
+          : msg.code;
+        content += `\n[Code TuerAi provided (for context—remember variable/function names and structure)]:\n\`\`\`lua\n${context}\n\`\`\``;
+      }
+      return { role: msg.role, content };
+    });
     try {
-      const history = messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content + (msg.code ? `\n[Code provided: ${msg.code.slice(0, 80)}...]` : ""),
-      }));
       const res = await fetch(`/api/scripts/${id}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,35 +184,47 @@ export default function ScriptEditorPage() {
       });
       const data = await res.json();
       if (res.status === 402) {
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: "You're out of generations. Come back tomorrow for more free credits, or sign up for a new account." },
-        ]);
+        const assistantMsg: Message = { role: "assistant", content: "You're out of generations. Come back tomorrow for more free credits, or sign up for a new account." };
+        const next = [...messagesWithUser, assistantMsg];
+        setMessages(next);
+        saveConversation(next);
         setCredits(0);
         return;
       }
       if (!res.ok) {
         const errMsg = data.detail ? `${data.error}: ${data.detail}` : (data.error || "Something went wrong.");
-        setMessages((m) => [...m, { role: "assistant", content: errMsg }]);
+        const assistantMsg: Message = { role: "assistant", content: errMsg };
+        const next = [...messagesWithUser, assistantMsg];
+        setMessages(next);
+        saveConversation(next);
         return;
       }
       setCredits(data.credits ?? credits);
       const isPartial = Boolean(data.isPartial);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: data.reply || "Here's the code.",
-          code: data.code || undefined,
-          isPartial,
-        },
-      ]);
+      const replaceRange = data.replaceRange ?? null;
+      const assistantMsg: Message = {
+        role: "assistant",
+        content: data.reply || "Here's the code.",
+        code: data.code || undefined,
+        isPartial,
+        replaceRange: replaceRange ?? undefined,
+      };
+      const next = [...messagesWithUser, assistantMsg];
+      setMessages(next);
+      saveConversation(next);
       if (data.code) {
         setPendingCode(data.code);
         setPendingIsPartial(isPartial);
+        setPendingReplaceRange(replaceRange);
       }
     } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "Failed to get a response. Try again." }]);
+      const assistantMsg: Message = {
+        role: "assistant",
+        content: "Failed to get a response. Try again.",
+      };
+      const next = [...messagesWithUser, assistantMsg];
+      setMessages(next);
+      saveConversation(next);
     } finally {
       setLoading(false);
     }
@@ -186,11 +232,21 @@ export default function ScriptEditorPage() {
 
   function applyPending() {
     if (!pendingCode) return;
-    const insertedCode = pendingIsPartial ? pendingCode.trimEnd() : pendingCode;
+    const insertedCode = pendingCode.trimEnd();
     let newContent: string;
     let startLine: number;
     let endLine: number;
-    if (pendingIsPartial && selectionRangeRef.current) {
+    if (pendingReplaceRange) {
+      const { startLine: rs, endLine: re } = pendingReplaceRange;
+      const lines = content.split("\n");
+      const before = lines.slice(0, rs - 1);
+      const after = lines.slice(re);
+      const replacementLines = insertedCode.split("\n");
+      const newLines = [...before, ...replacementLines, ...after];
+      newContent = newLines.join("\n");
+      startLine = rs;
+      endLine = rs + replacementLines.length - 1;
+    } else if (pendingIsPartial && selectionRangeRef.current) {
       const { start, end } = selectionRangeRef.current;
       const startClamp = Math.max(0, Math.min(start, content.length));
       const endClamp = Math.max(startClamp, Math.min(end, content.length));
@@ -208,6 +264,7 @@ export default function ScriptEditorPage() {
     setContent(newContent);
     setPendingCode(null);
     setPendingIsPartial(false);
+    setPendingReplaceRange(null);
     selectionRangeRef.current = null;
     setHighlightLines({ startLine, endLine });
     saveScript(newContent);
@@ -216,6 +273,7 @@ export default function ScriptEditorPage() {
   function declinePending() {
     setPendingCode(null);
     setPendingIsPartial(false);
+    setPendingReplaceRange(null);
     selectionRangeRef.current = null;
   }
 
@@ -403,7 +461,7 @@ export default function ScriptEditorPage() {
             </div>
             <span className="text-xs text-sand-500">Latest development AI for Roblox</span>
           </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-5">
+          <div className="tuerss-chat-scroll flex-1 overflow-y-auto overflow-x-hidden p-5">
             <div className="mx-auto max-w-2xl space-y-6">
               {messages.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-10 text-center">
@@ -440,8 +498,8 @@ export default function ScriptEditorPage() {
                       </div>
                     </div>
                     {msg.code && (
-                      <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-xl">
-                        <div className="flex items-center justify-between border-b border-white/10 bg-[#141414] px-4 py-2">
+                      <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-xl max-h-[70vh] flex flex-col">
+                        <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-[#141414] px-4 py-2">
                           <span className="text-[11px] font-semibold uppercase tracking-wider text-sand-500">
                             Lua
                           </span>
@@ -453,7 +511,9 @@ export default function ScriptEditorPage() {
                             <Copy className="h-3.5 w-3.5" /> Copy
                           </button>
                         </div>
-                        <ChatCodeBlock code={msg.code} />
+                        <div className="min-h-0 flex-1 overflow-auto">
+                          <ChatCodeBlock code={msg.code} />
+                        </div>
                         {showApplyDecline && (
                           <div className="flex items-center gap-2 border-t border-white/10 bg-[#141414] px-4 py-3">
                             <button

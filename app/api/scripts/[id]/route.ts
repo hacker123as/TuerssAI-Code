@@ -33,8 +33,9 @@ export async function PATCH(
     data: {
       ...(typeof body.title === "string" && { title: body.title }),
       ...(typeof body.content === "string" && { content: body.content }),
+      ...(body.conversationHistory !== undefined && { conversationHistory: typeof body.conversationHistory === "string" ? body.conversationHistory : JSON.stringify(body.conversationHistory) }),
     },
-    select: { id: true, title: true, content: true, createdAt: true, updatedAt: true },
+    select: { id: true, title: true, content: true, conversationHistory: true, createdAt: true, updatedAt: true },
   });
   return NextResponse.json(updated);
 }

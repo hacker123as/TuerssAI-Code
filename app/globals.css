@@ -24,3 +24,12 @@ body {
 .tuerss-applied-highlight {
   background: rgba(34, 197, 94, 0.22) !important;
 }
+
+/* Hide scrollbar in TuerAi chat panel (keep scroll behavior) */
+.tuerss-chat-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tuerss-chat-scroll::-webkit-scrollbar {
+  display: none;
+}
