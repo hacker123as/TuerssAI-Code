@@ -43,13 +43,14 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/bypass", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Bypass failed");
+        const msg = data.detail ? `${data.error}: ${data.detail}` : (data.error || "Bypass failed");
+        setError(msg);
         return;
       }
       router.push("/dashboard");
       router.refresh();
-    } catch {
-      setError("Bypass failed");
+    } catch (err) {
+      setError("Bypass failed. Check console or try again.");
     } finally {
       setBypassLoading(false);
     }

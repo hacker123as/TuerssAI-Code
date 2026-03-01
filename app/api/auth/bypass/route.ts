@@ -8,6 +8,18 @@ const TEST_USERNAME = "testaccount";
 const TEST_PASSWORD = "test-bypass-123";
 
 export async function POST() {
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      { error: "Bypass failed", detail: "DATABASE_URL is not set. Add it in Vercel Environment Variables." },
+      { status: 500 }
+    );
+  }
+  if (!process.env.JWT_SECRET) {
+    return NextResponse.json(
+      { error: "Bypass failed", detail: "JWT_SECRET is not set. Add it in Vercel Environment Variables." },
+      { status: 500 }
+    );
+  }
   try {
     let user = await prisma.user.findUnique({ where: { email: TEST_EMAIL } });
     if (!user) {
@@ -44,7 +56,11 @@ export async function POST() {
     });
     return res;
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Bypass failed" }, { status: 500 });
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Bypass error:", e);
+    return NextResponse.json(
+      { error: "Bypass failed", detail: message },
+      { status: 500 }
+    );
   }
 }
