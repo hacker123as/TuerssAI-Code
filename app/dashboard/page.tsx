@@ -89,7 +89,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#0d0d0d]">
+      <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d]">
         <AppSidebar user={user} />
         <main className="flex flex-1 items-center justify-center">
           <div className="text-sand-500">Loading…</div>
@@ -99,9 +99,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0d0d0d] text-sand-100">
+    <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d] text-sand-100">
       <AppSidebar user={user} />
-      <main className="flex-1 overflow-auto">
+      <main className="tuerss-scrollbar-hide min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto max-w-5xl px-5 py-8">
           <div className="mb-8 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-white">My Scripts</h1>

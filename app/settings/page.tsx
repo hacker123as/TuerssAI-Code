@@ -121,9 +121,9 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#0d0d0d]">
+      <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d]">
         <AppSidebar user={user} />
-        <main className="flex flex-1 items-center justify-center">
+        <main className="flex flex-1 items-center justify-center overflow-hidden">
           <div className="text-sand-500">Loading…</div>
         </main>
       </div>
@@ -131,9 +131,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0d0d0d] text-sand-100">
+    <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d] text-sand-100">
       <AppSidebar user={user} />
-      <main className="flex-1 overflow-auto">
+      <main className="tuerss-scrollbar-hide min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto max-w-2xl px-5 py-8">
           <h1 className="mb-8 flex items-center gap-2 text-2xl font-bold text-white">
             <SettingsIcon className="h-7 w-7 text-sand-500" /> Settings

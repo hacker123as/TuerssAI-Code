@@ -329,9 +329,9 @@ export default function ScriptEditorPage() {
   }
 
   return (
-    <div className="flex h-screen bg-[#0d0d0d] text-sand-100">
+    <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d] text-sand-100">
       <AppSidebar user={sidebarUser} />
-      <div className="flex flex-1 min-h-0 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#141414] px-5 shadow-lg">
         <div className="flex items-center gap-4">
           <Link
@@ -395,18 +395,18 @@ export default function ScriptEditorPage() {
       </header>
 
       <div
-        className="script-editor-layout flex flex-1 min-h-0"
+        className="script-editor-layout flex min-h-0 flex-1 overflow-hidden"
         onMouseLeave={() => resizing && setResizing(false)}
       >
         <div
-          className="flex flex-col shrink-0 border-r border-white/10 bg-[#0d0d0d] transition-[width] duration-100"
+          className="flex min-h-0 shrink-0 flex-col border-r border-white/10 bg-[#0d0d0d] transition-[width] duration-100"
           style={{ width: `${editorWidth}%` }}
         >
           <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/10 bg-[#141414] px-4">
             <span className="text-xs text-sand-500">Script</span>
             <span className="font-mono text-[11px] text-sand-600">Monaco · Lua</span>
           </div>
-          <div className="flex-1 min-h-0">
+          <div className="min-h-0 flex-1 overflow-hidden">
             <MonacoEditor
               height="100%"
               language="lua"
@@ -463,11 +463,11 @@ export default function ScriptEditorPage() {
                 smoothScrolling: true,
                 mouseWheelZoom: true,
                 scrollbar: {
-                  vertical: "auto",
-                  horizontal: "auto",
-                  useShadows: true,
-                  verticalScrollbarSize: 10,
-                  horizontalScrollbarSize: 10,
+                  vertical: "hidden",
+                  horizontal: "hidden",
+                  useShadows: false,
+                  verticalScrollbarSize: 0,
+                  horizontalScrollbarSize: 0,
                 },
                 overviewRulerBorder: false,
                 hideCursorInOverviewRuler: true,
@@ -493,7 +493,7 @@ export default function ScriptEditorPage() {
           <div className="h-12 w-1 rounded-full bg-white/20 transition hover:bg-sand-500/60" />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-[#111]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#111]">
           <div className="flex h-12 shrink-0 items-center gap-3 border-b border-white/10 bg-[#141414] px-5">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -501,7 +501,7 @@ export default function ScriptEditorPage() {
             </div>
             <span className="text-xs text-sand-500">Latest development AI for Roblox</span>
           </div>
-          <div className="tuerss-chat-scroll flex-1 overflow-y-auto overflow-x-hidden p-5">
+          <div className="tuerss-chat-scroll tuerss-scrollbar-hide flex-1 overflow-y-auto overflow-x-hidden p-5">
             <div className="mx-auto max-w-2xl space-y-6">
               {messages.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-10 text-center">
