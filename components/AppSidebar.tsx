@@ -32,15 +32,15 @@ export function AppSidebar({ user }: { user: User }) {
   ];
 
   return (
-    <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-white/10 bg-[#141414]">
+    <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-white/10 bg-[#121212]">
       <div className="flex h-14 items-center gap-2 border-b border-white/10 px-4">
-        <Link href="/dashboard" className="flex items-center gap-2 font-bold text-white">
+        <Link href="/dashboard" className="flex items-center gap-2 font-bold text-white transition hover:opacity-90">
           <span className="text-lg">TuerSS</span>
         </Link>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
         {user && (
-          <div className="mb-2 flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+          <div className="mb-2 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 transition-colors">
             {user.profileImageUrl ? (
               <img
                 src={user.profileImageUrl}
@@ -72,8 +72,8 @@ export function AppSidebar({ user }: { user: User }) {
               <Link
                 key={item.label}
                 href={item.href}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
-                  isActive ? "bg-white/10 text-white" : "text-sand-400 hover:bg-white/5 hover:text-white"
+                className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${
+                  isActive ? "bg-sand-500/20 text-white" : "text-sand-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -87,7 +87,7 @@ export function AppSidebar({ user }: { user: User }) {
         <button
           type="button"
           onClick={logout}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-sand-400 hover:bg-white/5 hover:text-white"
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-sand-400 transition-all duration-200 hover:bg-white/5 hover:text-white"
         >
           <LogOut className="h-4 w-4" /> Log out
         </button>

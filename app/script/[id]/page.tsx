@@ -382,7 +382,7 @@ export default function ScriptEditorPage() {
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sand-300 transition hover:bg-white/10 hover:text-white"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sand-300 transition-all duration-200 hover:bg-white/10 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
@@ -418,7 +418,7 @@ export default function ScriptEditorPage() {
             type="button"
             onClick={() => saveScript(content)}
             disabled={saving}
-            className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-sand-200 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-sand-200 transition-all duration-200 hover:bg-white/10 hover:text-white disabled:opacity-50"
           >
             {savedAt ? (
               <>
@@ -433,7 +433,7 @@ export default function ScriptEditorPage() {
           <button
             type="button"
             onClick={openUploadModal}
-            className="flex items-center gap-2 rounded-lg border border-sand-500/50 bg-sand-500/10 px-4 py-2 text-sm font-medium text-sand-200 transition hover:bg-sand-500/20 hover:text-white"
+            className="btn-shine flex items-center gap-2 rounded-xl border border-sand-500/50 bg-sand-500/10 px-4 py-2 text-sm font-medium text-sand-200 transition-all duration-200 hover:bg-sand-500/20 hover:text-white"
           >
             <Upload className="h-4 w-4" /> Upload to community
           </button>

@@ -24,7 +24,7 @@ function ScriptCard({ s }: { s: CommunityScript }) {
   return (
     <Link
       href={`/community/${s.id}`}
-      className="block rounded-xl border border-white/10 bg-[#141414] transition hover:border-white/20 hover:bg-[#1a1a1a]"
+      className="hover-lift block rounded-xl border border-white/10 bg-[#141414]"
     >
       <div className="flex gap-4 p-4">
         <div className="shrink-0">
@@ -183,7 +183,7 @@ export default function CommunityPage() {
           ) : (
             <div className="space-y-8">
               {/* Popular — most views at top */}
-              <section className="rounded-2xl border border-white/10 bg-[#141414]/80 p-6">
+              <section className="animate-fade-in-up rounded-2xl border border-white/10 bg-[#141414]/90 p-6 shadow-xl shadow-black/20">
                 <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
                   <TrendingUp className="h-5 w-5 text-amber-400" /> Popular
                 </h2>
@@ -198,7 +198,7 @@ export default function CommunityPage() {
               </section>
 
               {/* Latest */}
-              <section className="rounded-2xl border border-white/10 bg-[#141414]/80 p-6">
+              <section className="animate-fade-in-up stagger-1 rounded-2xl border border-white/10 bg-[#141414]/90 p-6 opacity-0 shadow-xl shadow-black/20 [animation-fill-mode:forwards]">
                 <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
                   <Clock className="h-5 w-5 text-sand-400" /> Latest
                 </h2>
@@ -213,7 +213,7 @@ export default function CommunityPage() {
               </section>
 
               {/* Made with AI */}
-              <section className="rounded-2xl border border-white/10 bg-[#141414]/80 p-6">
+              <section className="animate-fade-in-up stagger-2 rounded-2xl border border-white/10 bg-[#141414]/90 p-6 opacity-0 shadow-xl shadow-black/20 [animation-fill-mode:forwards]">
                 <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
                   <Sparkles className="h-5 w-5 text-emerald-400" /> Made with AI
                 </h2>

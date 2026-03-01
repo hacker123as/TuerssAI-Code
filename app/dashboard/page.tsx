@@ -89,17 +89,20 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d]">
+      <div className="flex h-screen max-h-screen overflow-hidden bg-[#0a0a0a]">
         <AppSidebar user={user} />
         <main className="flex flex-1 items-center justify-center">
-          <div className="text-sand-500">Loading…</div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-sand-600 border-t-sand-400" />
+            <span className="text-sm text-sand-500">Loading…</span>
+          </div>
         </main>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen max-h-screen overflow-hidden bg-[#0d0d0d] text-sand-100">
+    <div className="flex h-screen max-h-screen overflow-hidden bg-[#0a0a0a] text-sand-100">
       <AppSidebar user={user} />
       <main className="tuerss-scrollbar-hide min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto max-w-5xl px-5 py-8">
@@ -113,7 +116,7 @@ export default function DashboardPage() {
                 onClick={createScript}
                 disabled={!canCreate}
                 title={createDisabledReason || "Create new script"}
-                className="flex items-center gap-2 rounded-xl bg-sand-500 px-5 py-2.5 font-medium text-white hover:bg-sand-400 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-shine flex items-center gap-2 rounded-xl bg-gradient-to-r from-sand-500 to-sand-600 px-5 py-2.5 font-medium text-white shadow-lg shadow-sand-500/20 transition-all duration-200 hover:scale-[1.02] hover:from-sand-400 hover:to-sand-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
               >
                 <Plus className="h-5 w-5" /> New script
               </button>
@@ -124,33 +127,33 @@ export default function DashboardPage() {
           )}
 
           {scripts.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-white/20 bg-[#141414] p-12 text-center">
-              <FileCode className="mx-auto h-12 w-12 text-sand-500" />
-              <p className="mt-4 text-sand-300">No scripts yet</p>
+            <div className="animate-fade-in-up rounded-2xl border-2 border-dashed border-white/20 bg-[#141414] p-12 text-center">
+              <FileCode className="mx-auto h-14 w-14 text-sand-500" />
+              <p className="mt-4 text-lg font-medium text-sand-300">No scripts yet</p>
               <p className="mt-1 text-sm text-sand-500">
                 Create a script and describe what you want. TuerAi will write the Lua for you. Chat is saved automatically.
               </p>
               <button
                 onClick={createScript}
                 disabled={!canCreate}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-sand-500 px-5 py-2.5 font-medium text-white hover:bg-sand-400 disabled:opacity-50"
+                className="btn-shine mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-sand-500 to-sand-600 px-5 py-2.5 font-medium text-white shadow-lg transition-all duration-200 hover:scale-[1.02] disabled:opacity-50"
               >
                 <Plus className="h-5 w-5" /> Create your first script
               </button>
             </div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {scripts.map((s) => (
-                <li key={s.id} className="group relative">
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {scripts.map((s, i) => (
+                <li key={s.id} className="group relative animate-fade-in-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: `${i * 0.05}s` }}>
                   <Link
                     href={`/script/${s.id}`}
-                    className="block rounded-xl border border-white/10 bg-[#141414] p-4 pr-10 transition hover:border-white/20 hover:bg-[#1a1a1a]"
+                    className="hover-lift block rounded-xl border border-white/10 bg-[#141414] p-5 pr-12"
                   >
                     <div className="flex items-center gap-2">
                       <FileCode className="h-5 w-5 shrink-0 text-sand-500" />
                       <span className="font-medium text-white">{s.title}</span>
                     </div>
-                    <p className="mt-1 truncate text-sm text-sand-500">
+                    <p className="mt-2 truncate text-sm text-sand-500">
                       {s.content ? `${s.content.slice(0, 60)}…` : "Empty script"}
                     </p>
                     <p className="mt-2 text-xs text-sand-600">
@@ -160,7 +163,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); setDeleteConfirm(s); }}
-                    className="absolute right-3 top-4 rounded-lg p-1.5 text-sand-500 opacity-0 transition hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
+                    className="absolute right-3 top-5 rounded-lg p-2 text-sand-500 opacity-0 transition-all duration-200 hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
                     title="Delete script"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -174,9 +177,9 @@ export default function DashboardPage() {
 
       {/* Delete confirmation modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !deleting && setDeleteConfirm(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in" onClick={() => !deleting && setDeleteConfirm(null)}>
           <div
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#141414] p-6 shadow-xl"
+            className="animate-scale-in w-full max-w-md rounded-2xl border border-white/10 bg-[#141414] p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-white">Delete script?</h3>
@@ -188,7 +191,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => !deleting && setDeleteConfirm(null)}
                 disabled={deleting}
-                className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-sand-300 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-xl border border-white/20 px-4 py-2.5 text-sm font-medium text-sand-300 transition-all hover:bg-white/10 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -196,7 +199,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => deleteScript(deleteConfirm)}
                 disabled={deleting}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-red-500 disabled:opacity-50"
               >
                 {deleting ? "Deleting…" : "Delete"}
               </button>
