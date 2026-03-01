@@ -81,7 +81,22 @@ export async function POST(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const isRateLimit =
+      message.includes("429") ||
+      message.includes("quota") ||
+      message.includes("rate limit") ||
+      message.includes("Too Many Requests");
     console.error("TuerAi generate error:", err);
+    if (isRateLimit) {
+      return NextResponse.json(
+        {
+          error: "Rate limit reached",
+          detail:
+            "Gemini API quota exceeded. Wait a minute and try again, or check your plan at https://ai.google.dev/gemini-api/docs/rate-limits",
+        },
+        { status: 429 }
+      );
+    }
     return NextResponse.json(
       { error: "Generation failed. Please try again.", detail: message },
       { status: 500 }
